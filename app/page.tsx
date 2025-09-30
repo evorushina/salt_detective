@@ -129,13 +129,8 @@ const ANIONS: IonKey[] = ["Cl-", "Br-", "I-", "SO4^2-", "NO3-", "Cr2O7^2-", "MnO
 type ViewMode = "idle" | "flame" | "reagent";
 
 export default function Home() {
-  const [unknownSalt, setUnknownSalt] = useState<Salt>(() => {
-    return SALTS[Math.floor(Math.random() * SALTS.length)];
-  });
-  const [log, setLog] = useState<string[]>(() => [
-    `A sample of an unknown salt appears ${unknownSalt.clues.solidColor}.`,
-    `Its solution looks ${unknownSalt.clues.solutionColor}.`,
-  ]);
+  const [unknownSalt, setUnknownSalt] = useState<Salt | null>(null);
+  const [log, setLog] = useState<string[]>([]);
   const [mode, setMode] = useState<ViewMode>("idle");
   const [isDissolving, setIsDissolving] = useState(true);
   const [currentFlame, setCurrentFlame] = useState<"orange" | "lilac" | "green" | "none">("none");
@@ -164,6 +159,19 @@ export default function Home() {
     setFeedback(null);
   };
 
+  // Initialize sample only on client to avoid SSR/client mismatch
+  useEffect(() => {
+    if (!unknownSalt) {
+      const start = SALTS[Math.floor(Math.random() * SALTS.length)];
+      setUnknownSalt(start);
+      setLog([
+        `A sample of an unknown salt appears ${start.clues.solidColor}.`,
+        `Its solution looks ${start.clues.solutionColor}.`,
+      ]);
+      setIsDissolving(true);
+    }
+  }, [unknownSalt]);
+
   useEffect(() => {
     if (isDissolving) {
       const t = setTimeout(() => setIsDissolving(false), 1800);
@@ -172,6 +180,7 @@ export default function Home() {
   }, [isDissolving, unknownSalt]);
 
   const doFlameTest = () => {
+    if (!unknownSalt) return;
     setMode("flame");
     const color = unknownSalt.flame ?? "orange";
     setCurrentFlame(unknownSalt.flame ? unknownSalt.flame : "none");
@@ -182,6 +191,7 @@ export default function Home() {
   };
 
   const addReagent = (reagent: "AgNO3" | "BaCl2" | "NaOH") => {
+    if (!unknownSalt) return;
     setMode("reagent");
     setCurrentReagent(reagent);
     const outcome = unknownSalt.reagents[reagent] ?? "none";
@@ -194,6 +204,7 @@ export default function Home() {
   };
 
   const guess = () => {
+    if (!unknownSalt) return;
     const correct = cationGuess === unknownSalt.cation && anionGuess === unknownSalt.anion;
     if (correct) {
       setShowWin(true);
@@ -239,7 +250,11 @@ export default function Home() {
       <main className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0">
         {/* Visualization Area */}
         <section className="relative p-6 md:p-8 flex items-center justify-center bg-black/5">
-          {mode === "flame" ? (
+          {!unknownSalt ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="beaker skeleton" style={{ width: 220, height: 260, borderRadius: 12 }} />
+            </div>
+          ) : mode === "flame" ? (
             <div className="w-full h-full flex flex-col items-center justify-center gap-4">
               <div className={`bunsen`}></div>
               <div className={`flame ${flameClass}`}>
@@ -248,7 +263,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <div className="beaker" style={{ ["--solution" as any]: solutionHexFor(unknownSalt) }}>
+              <div className="beaker" style={{ ["--solution" as any]: unknownSalt ? solutionHexFor(unknownSalt) : "#3b82f6" }}>
                 <div className="liquid tinted"></div>
                 {isDissolving ? (
                   <>
@@ -276,9 +291,17 @@ export default function Home() {
           <div>
             <h2 className="text-lg font-semibold mb-2">Experiment Log</h2>
             <div className="h-40 md:h-56 overflow-auto rounded border border-white/15 bg-white/5 p-3 text-sm space-y-1">
-              {log.map((entry, idx) => (
-                <div key={idx}>• {entry}</div>
-              ))}
+              {!unknownSalt ? (
+                <>
+                  <div className="skeleton h-4 rounded w-3/4" />
+                  <div className="skeleton h-4 rounded w-5/6" />
+                  <div className="skeleton h-4 rounded w-2/3" />
+                </>
+              ) : (
+                (log.length ? log : ["Preparing sample..."]).map((entry, idx) => (
+                  <div key={idx}>• {entry}</div>
+                ))
+              )}
             </div>
           </div>
 
@@ -338,7 +361,7 @@ export default function Home() {
         </section>
       </main>
 
-      {showWin ? (
+      {showWin && unknownSalt ? (
         <div className="fixed inset-0 bg-black/60 backdrop-blur flex items-center justify-center p-6">
           <div className="w-full max-w-md rounded-lg border border-white/20 bg-black/80 p-6 text-center space-y-3">
             <div className="text-2xl">🎉 Correct!</div>

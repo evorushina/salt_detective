@@ -27,6 +27,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <nav className="w-full border-b border-white/10 px-6 py-3 flex items-center justify-between">
+          <a href="/" className="font-semibold">Salt Detective</a>
+          <div className="flex items-center gap-4 text-sm">
+            <a href="/" className="hover:underline">Home</a>
+            <a href="/dashboard" className="hover:underline">Dashboard</a>
+          </div>
+        </nav>
         {children}
       </body>
     </html>
