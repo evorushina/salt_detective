@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-type IonKey = "Na+" | "K+" | "Cu2+" | "Ba2+" | "Cl-" | "Br-" | "I-" | "SO4^2-";
+type IonKey =
+  | "Na+" | "K+" | "Ca2+" | "Mg2+"
+  | "Cu2+" | "Fe3+" | "Co2+" | "Ni2+" | "Mn2+" | "Ba2+"
+  | "Cl-" | "Br-" | "I-" | "SO4^2-" | "NO3-" | "Cr2O7^2-" | "MnO4-";
 
 type Salt = {
   name: string;
@@ -12,10 +15,11 @@ type Salt = {
     solidColor: string;
     solutionColor: string;
   };
-  flame?: "orange" | "lilac" | "green";
+  flame?: "orange" | "lilac" | "green" | "none";
   reagents: {
     AgNO3?: "white" | "cream" | "yellow" | "none";
     BaCl2?: "white" | "none";
+    NaOH?: "brown" | "blue" | "green" | "white" | "pink" | "none";
   };
 };
 
@@ -26,7 +30,7 @@ const SALTS: Salt[] = [
     anion: "Cl-",
     clues: { solidColor: "white", solutionColor: "colorless" },
     flame: "orange",
-    reagents: { AgNO3: "white", BaCl2: "none" },
+    reagents: { AgNO3: "white", BaCl2: "none", NaOH: "none" },
   },
   {
     name: "Potassium Bromide",
@@ -34,23 +38,23 @@ const SALTS: Salt[] = [
     anion: "Br-",
     clues: { solidColor: "white", solutionColor: "colorless" },
     flame: "lilac",
-    reagents: { AgNO3: "cream", BaCl2: "none" },
+    reagents: { AgNO3: "cream", BaCl2: "none", NaOH: "none" },
   },
   {
     name: "Copper(II) Chloride",
     cation: "Cu2+",
     anion: "Cl-",
-    clues: { solidColor: "green", solutionColor: "blue-green" },
+    clues: { solidColor: "green", solutionColor: "blue" },
     flame: "green",
-    reagents: { AgNO3: "white", BaCl2: "none" },
+    reagents: { AgNO3: "white", BaCl2: "none", NaOH: "blue" },
   },
   {
     name: "Barium Sulfate",
     cation: "Ba2+",
     anion: "SO4^2-",
     clues: { solidColor: "white", solutionColor: "colorless" },
-    flame: undefined,
-    reagents: { AgNO3: "none", BaCl2: "white" },
+    flame: "none",
+    reagents: { AgNO3: "none", BaCl2: "white", NaOH: "white" },
   },
   {
     name: "Sodium Iodide",
@@ -58,12 +62,69 @@ const SALTS: Salt[] = [
     anion: "I-",
     clues: { solidColor: "white", solutionColor: "colorless" },
     flame: "orange",
-    reagents: { AgNO3: "yellow", BaCl2: "none" },
+    reagents: { AgNO3: "yellow", BaCl2: "none", NaOH: "none" },
+  },
+  // Enhanced edition specific examples
+  {
+    name: "Eisen(III)-chlorid (Iron(III) Chloride)",
+    cation: "Fe3+",
+    anion: "Cl-",
+    clues: { solidColor: "brown", solutionColor: "brown" },
+    flame: "none",
+    reagents: { AgNO3: "white", BaCl2: "none", NaOH: "brown" },
+  },
+  {
+    name: "Cobalt(II) Chloride",
+    cation: "Co2+",
+    anion: "Cl-",
+    clues: { solidColor: "pink", solutionColor: "pink" },
+    flame: "none",
+    reagents: { AgNO3: "white", BaCl2: "none", NaOH: "pink" },
+  },
+  {
+    name: "Nickel(II) Sulfate",
+    cation: "Ni2+",
+    anion: "SO4^2-",
+    clues: { solidColor: "green", solutionColor: "green" },
+    flame: "none",
+    reagents: { AgNO3: "none", BaCl2: "white", NaOH: "green" },
+  },
+  {
+    name: "Potassium Permanganate",
+    cation: "K+",
+    anion: "MnO4-",
+    clues: { solidColor: "dark-violet", solutionColor: "violet" },
+    flame: "lilac",
+    reagents: { AgNO3: "none", BaCl2: "none", NaOH: "none" },
+  },
+  {
+    name: "Sodium Dichromate",
+    cation: "Na+",
+    anion: "Cr2O7^2-",
+    clues: { solidColor: "orange", solutionColor: "orange" },
+    flame: "orange",
+    reagents: { AgNO3: "none", BaCl2: "none", NaOH: "none" },
+  },
+  {
+    name: "Copper(II) Sulfate",
+    cation: "Cu2+",
+    anion: "SO4^2-",
+    clues: { solidColor: "blue", solutionColor: "blue" },
+    flame: "green",
+    reagents: { AgNO3: "none", BaCl2: "white", NaOH: "blue" },
+  },
+  {
+    name: "Calcium Chloride",
+    cation: "Ca2+",
+    anion: "Cl-",
+    clues: { solidColor: "white", solutionColor: "colorless" },
+    flame: "none",
+    reagents: { AgNO3: "white", BaCl2: "none", NaOH: "white" },
   },
 ];
 
-const CATIONS: IonKey[] = ["Na+", "K+", "Cu2+", "Ba2+"];
-const ANIONS: IonKey[] = ["Cl-", "Br-", "I-", "SO4^2-"];
+const CATIONS: IonKey[] = ["Na+", "K+", "Ca2+", "Mg2+", "Cu2+", "Fe3+", "Co2+", "Ni2+", "Mn2+"];
+const ANIONS: IonKey[] = ["Cl-", "Br-", "I-", "SO4^2-", "NO3-", "Cr2O7^2-", "MnO4-"];
 
 type ViewMode = "idle" | "flame" | "reagent";
 
@@ -76,9 +137,10 @@ export default function Home() {
     `Its solution looks ${unknownSalt.clues.solutionColor}.`,
   ]);
   const [mode, setMode] = useState<ViewMode>("idle");
+  const [isDissolving, setIsDissolving] = useState(true);
   const [currentFlame, setCurrentFlame] = useState<"orange" | "lilac" | "green" | "none">("none");
-  const [currentReagent, setCurrentReagent] = useState<"AgNO3" | "BaCl2" | null>(null);
-  const [precipitateColor, setPrecipitateColor] = useState<"white" | "cream" | "yellow" | "none">("none");
+  const [currentReagent, setCurrentReagent] = useState<"AgNO3" | "BaCl2" | "NaOH" | null>(null);
+  const [precipitateColor, setPrecipitateColor] = useState<"white" | "cream" | "yellow" | "brown" | "blue" | "green" | "pink" | "none">("none");
   const [cationGuess, setCationGuess] = useState<IonKey>(CATIONS[0]);
   const [anionGuess, setAnionGuess] = useState<IonKey>(ANIONS[0]);
   const [showWin, setShowWin] = useState(false);
@@ -92,6 +154,7 @@ export default function Home() {
       `Its solution looks ${next.clues.solutionColor}.`,
     ]);
     setMode("idle");
+    setIsDissolving(true);
     setCurrentFlame("none");
     setCurrentReagent(null);
     setPrecipitateColor("none");
@@ -100,6 +163,13 @@ export default function Home() {
     setShowWin(false);
     setFeedback(null);
   };
+
+  useEffect(() => {
+    if (isDissolving) {
+      const t = setTimeout(() => setIsDissolving(false), 1800);
+      return () => clearTimeout(t);
+    }
+  }, [isDissolving, unknownSalt]);
 
   const doFlameTest = () => {
     setMode("flame");
@@ -111,7 +181,7 @@ export default function Home() {
     setLog((prev) => [...prev, message]);
   };
 
-  const addReagent = (reagent: "AgNO3" | "BaCl2") => {
+  const addReagent = (reagent: "AgNO3" | "BaCl2" | "NaOH") => {
     setMode("reagent");
     setCurrentReagent(reagent);
     const outcome = unknownSalt.reagents[reagent] ?? "none";
@@ -146,6 +216,18 @@ export default function Home() {
     }
   }, [currentFlame]);
 
+  function solutionHexFor(salt: Salt): string {
+    // Choose a tint based on characteristic solution color hints.
+    const color = salt.clues.solutionColor.toLowerCase();
+    if (color.includes("blue")) return "#2aa3ff";
+    if (color.includes("green")) return "#22c55e";
+    if (color.includes("violet")) return "#7c3aed";
+    if (color.includes("pink")) return "#ec4899";
+    if (color.includes("orange")) return "#f97316";
+    if (color.includes("brown")) return "#8b5e3c";
+    return "#3b82f6"; // default soft blue for colorless/neutral
+  }
+
   return (
     <div className="min-h-screen w-full flex flex-col">
       <header className="w-full border-b border-white/10 px-6 py-4 flex items-center justify-between">
@@ -160,17 +242,29 @@ export default function Home() {
           {mode === "flame" ? (
             <div className="w-full h-full flex flex-col items-center justify-center gap-4">
               <div className={`bunsen`}></div>
-              <div className={`flame ${flameClass}`}></div>
+              <div className={`flame ${flameClass}`}>
+                <div className={`sparks ${flameClass}`}></div>
+              </div>
             </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <div className="beaker">
-                <div className="liquid"></div>
+              <div className="beaker" style={{ ["--solution" as any]: solutionHexFor(unknownSalt) }}>
+                <div className="liquid tinted"></div>
+                {isDissolving ? (
+                  <>
+                    <div className="crystals"></div>
+                    <div className="crystal-particles"></div>
+                  </>
+                ) : null}
                 {mode === "reagent" && currentReagent ? (
-                  <div className={`dropper ${currentReagent === "AgNO3" ? "drop-ag" : "drop-ba"}`}></div>
+                  <div className={`dropper ${currentReagent === "AgNO3" ? "drop-ag" : currentReagent === "BaCl2" ? "drop-ba" : "drop-naoh"}`}></div>
                 ) : null}
                 {mode === "reagent" && precipitateColor !== "none" ? (
-                  <div className={`precip precip-${precipitateColor}`}></div>
+                  <>
+                    <div className={`cloud cloud-${precipitateColor}`}></div>
+                    <div className={`precip precip-${precipitateColor}`}></div>
+                    <div className={`grains grains-${precipitateColor}`}></div>
+                  </>
                 ) : null}
               </div>
             </div>
@@ -199,6 +293,9 @@ export default function Home() {
               </button>
               <button className="px-3 py-2 rounded bg-white/10 hover:bg-white/20 border border-white/10" onClick={() => addReagent("BaCl2")}>
                 💧 Add BaCl₂
+              </button>
+              <button className="px-3 py-2 rounded bg-white/10 hover:bg-white/20 border border-white/10" onClick={() => addReagent("NaOH")}>
+                💧 Add NaOH
               </button>
             </div>
           </div>
